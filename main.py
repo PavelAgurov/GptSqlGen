@@ -59,13 +59,13 @@ with tab_tables:
     table_description_example = st.expander("Examples", expanded=False).markdown(table_description_example_str)
 
     table_generate_columns = st.columns(2)
-    table_description = table_generate_columns[0].text_area("Table Description:", height=200)
-    table_rules = table_generate_columns[1].text_area("Table Rules for schema generation:", st.session_state.table_rules, height=200)
+    table_description = table_generate_columns[0].text_area("Table Description:", height=200, placeholder= "See Examples above")
+    table_rules = table_generate_columns[1].text_area("Table Rules for schema generation:", st.session_state.table_rules, height=200, placeholder= "See Examples above")
     button_generate_schema = st.button("Generate schema")
 
     table_sql_columns = st.columns(2)
-    table_schema = table_sql_columns[0].text_area("Table Schema:", st.session_state.generated_schema, height=200)
-    table_schema_script_definition = table_sql_columns[1].text_area("Script Definition for SQL generation:", st.session_state.table_script_definition, height=200)
+    table_schema = table_sql_columns[0].text_area("Table Schema:", st.session_state.generated_schema, height=200, placeholder= "See Examples above")
+    table_schema_script_definition = table_sql_columns[1].text_area("Script Definition for SQL generation:", st.session_state.table_script_definition, height=200, placeholder= "See Examples above")
     button_generate_sql = st.button("Generate SQL")
     table_sql = st.text_area("Sql:", st.session_state.generated_sql, height=200)
 
