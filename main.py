@@ -31,8 +31,10 @@ if 'operation_done' not in st.session_state:
     st.session_state.operation_done = None
 if 'operation_errors' not in st.session_state:
     st.session_state.operation_errors = None
-if 'tokens_used' not in st.session_state:
-    st.session_state.tokens_used = 0
+if 'tokens_currently_used' not in st.session_state:
+    st.session_state.tokens_currently_used = 0
+if 'tokens_total_used' not in st.session_state:
+    st.session_state.tokens_total_used = 0
 if 'table_rules' not in st.session_state or st.session_state.table_rules is None or st.session_state.table_rules.strip() == '':
     st.session_state.table_rules = prompts.GENERATE_SCHEMA_DEFAULT_RULES.strip()
 if 'table_script_definition' not in st.session_state or st.session_state.table_script_definition is None or st.session_state.table_script_definition.strip() == '':
@@ -42,7 +44,9 @@ if 'table_script_definition' not in st.session_state or st.session_state.table_s
 st.set_page_config(page_title= "Sql Generator", layout="wide")
 streamlit_hack_remove_top_space()
 
-st.markdown("## Sql Generator")
+st.markdown("## Sql Generator") 
+st.info(strings.APP_INFO, icon="ℹ️")
+st.info(f'Used {st.session_state.tokens_currently_used} tokens. Total used {st.session_state.tokens_total_used} tokens.')
 
 if st.session_state.operation_done:
     st.success(st.session_state.operation_done)
@@ -52,7 +56,7 @@ if st.session_state.operation_errors:
     st.error(st.session_state.operation_errors)
     st.session_state.operation_errors = None
 
-tab_tables, tab_procedures, tb_prompts = st.tabs(["Generate Tables", "Generate Procedures", "Prompts"])
+tab_tables, tab_procedures = st.tabs(["Generate Tables", "Generate Procedures"])
 
 with tab_tables:
     table_description_example_str = strings.TABLE_DESCRIPTION_EXAMPLE.strip()
@@ -69,12 +73,20 @@ with tab_tables:
     button_generate_sql = st.button("Generate SQL")
     table_sql = st.text_area("Sql:", st.session_state.generated_sql, height=200)
 
+def update_used_tokens(currently_used = 0):
+    """Update token counters"""
+    st.session_state.tokens_currently_used = currently_used
+    st.session_state.tokens_total_used += currently_used
+
+update_used_tokens()
+
 if button_generate_schema:
     if not table_description or not table_rules:
         st.session_state.operation_errors = "Please enter table description and rules"
     else:
         existed_tables_str = ""
-        st.session_state.generated_schema = st.session_state.core.generate_schema(table_description, table_rules, existed_tables_str)
+        st.session_state.generated_schema, tokens_used = st.session_state.core.generate_schema(table_description, table_rules, existed_tables_str)
+        update_used_tokens(tokens_used)
         st.session_state.operation_done = "Schema generated"
     st.rerun()
 
@@ -83,6 +95,7 @@ if button_generate_sql:
         st.session_state.operation_errors = "Please enter table schema"
     else:
         existed_tables_str = ""
-        st.session_state.generated_sql = st.session_state.core.generate_sql(table_schema, st.session_state.table_script_definition, existed_tables_str)
+        st.session_state.generated_sql, tokens_used = st.session_state.core.generate_sql(table_schema, st.session_state.table_script_definition, existed_tables_str)
+        update_used_tokens(tokens_used)
         st.session_state.operation_done = "SQL generated"
     st.rerun()

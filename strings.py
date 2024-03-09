@@ -2,6 +2,12 @@
     Strings
 """
 
+APP_INFO = """
+With help of this application you can easy generate SQL scripts based on simple table description.
+Fist step is to create table definision in xml format and after it you can generate SQLs.
+You can find examples below.
+"""
+
 TABLE_DESCRIPTION_EXAMPLE = """
 **Example 1 (as description):**
 ```

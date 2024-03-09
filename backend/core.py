@@ -31,7 +31,7 @@ class Core:
         logger.debug(f"table_name: {table_name}")
         logger.debug(f"LLM used tokens: {tokens_used}")
 
-        return table_schema
+        return table_schema, tokens_used
     
 
     def generate_sql(self, table_schema : str, script_definition : str, existed_tables_str : str) -> str:
@@ -46,4 +46,4 @@ class Core:
         logger.debug(f"Local errors: {local_errors}")
         logger.debug(f"LLM used tokens: {tokens_used}")
 
-        return table_sql
+        return table_sql, tokens_used
