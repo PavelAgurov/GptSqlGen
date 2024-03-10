@@ -4,8 +4,10 @@
 # pylint: disable=C0301,C0103,C0303,C0411,W1203
 
 import logging
+import os
+from typing import Any
 
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain.globals import set_llm_cache
 from langchain.cache import SQLiteCache
 from langchain_core.output_parsers import StrOutputParser
@@ -21,29 +23,115 @@ class LLMCore:
     """
         LLM Core
     """
+    _BASE_MODEL_NAME = "gpt-3.5-turbo-0125"
+    _MAX_TOKENS = 2000
 
-    def __init__(self):
+    chain_generate_sql_schema = None
+    chain_generate_prisma_schema = None
+    chain_generate_sql = None
+
+    def __init__(self, all_secrets : dict[str, Any]):
 
         # Init cache
         set_llm_cache(SQLiteCache(database_path=".langchain.db"))
 
+        # init env
+        self.init_llm_environment(all_secrets)
+
         # Init LLM
-        self.llm = ChatOpenAI(
-            model_name="gpt-3.5-turbo-0125", 
-            #model_name = "gpt-4-0125-preview",
-            temperature=0,
-            max_tokens = 2000
-        )
+        llm = self.create_llm(self._MAX_TOKENS, self._BASE_MODEL_NAME)
 
         # Init chains
         generate_sql_schema_prompt = ChatPromptTemplate.from_template(prompts.GENERATE_SQL_SCHEMA_PROMPT)
-        self.chain_generate_sql_schema  = generate_sql_schema_prompt | self.llm | StrOutputParser()
+        self.chain_generate_sql_schema  = generate_sql_schema_prompt | llm | StrOutputParser()
 
         generate_prisma_schema_prompt = ChatPromptTemplate.from_template(prompts.GENERATE_PRISMA_SCHEMA_PROMPT)
-        self.chain_generate_prisma_schema  = generate_prisma_schema_prompt | self.llm | StrOutputParser()
+        self.chain_generate_prisma_schema  = generate_prisma_schema_prompt | llm | StrOutputParser()
 
         generate_sql_prompt = ChatPromptTemplate.from_template(prompts.GENERATE_SQL_PROMPT)
-        self.chain_generate_sql  = generate_sql_prompt | self.llm | StrOutputParser()
+        self.chain_generate_sql  = generate_sql_prompt | llm | StrOutputParser()
+
+    def init_llm_environment(self, all_secrets : dict[str, any]):
+        """Inint OpenAI or Azure environment"""
+
+        self.openai_api_type = 'openai'
+        self.openai_api_deployment = None
+        if not all_secrets:
+            return
+ 
+        # read from secrets
+        self.openai_api_type = all_secrets.get('OPENAI_API_TYPE')
+
+        if self.openai_api_type == 'openai':
+            openai_secrets = all_secrets.get('open_api_openai')
+            if openai_secrets:
+                os.environ["OPENAI_API_KEY"] = openai_secrets.get('OPENAI_API_KEY')
+                base_model_name = openai_secrets.get('OPENAI_BASE_MODEL_NAME')
+                if base_model_name:
+                    self._BASE_MODEL_NAME = base_model_name
+                max_tokens = openai_secrets.get('MAX_TOKENS')
+                if max_tokens:
+                    self._MAX_TOKENS = int(max_tokens)
+                logger.info(f'Run with OpenAI from config file [{len(os.environ["OPENAI_API_KEY"])}]')
+                logger.info(f'Base model {self._BASE_MODEL_NAME}')
+            else:
+                logger.error('open_api_openai section is required')
+            return
+
+        if self.openai_api_type == 'azure':
+            azure_secrets = all_secrets.get('open_api_azure')
+            if azure_secrets:
+                os.environ["AZURE_OPENAI_API_KEY"] = azure_secrets.get('AZURE_OPENAI_API_KEY')
+                os.environ["OPENAI_API_TYPE"] = "azure"
+                os.environ["OPENAI_API_VERSION"] = azure_secrets.get('OPENAI_API_VERSION')
+                os.environ["AZURE_OPENAI_ENDPOINT"] = azure_secrets.get('AZURE_OPENAI_ENDPOINT')
+                self.openai_api_deployment = azure_secrets.get('OPENAI_API_DEPLOYMENT')
+                base_model_name = azure_secrets.get('OPENAI_BASE_MODEL_NAME')
+                if base_model_name:
+                    self._BASE_MODEL_NAME = base_model_name
+                max_tokens = azure_secrets.get('MAX_TOKENS')
+                if max_tokens:
+                    self._MAX_TOKENS = int(max_tokens)
+                logger.info('Run with Azure OpenAI config file')
+                logger.info(f'Base model {self._BASE_MODEL_NAME}')
+            else:
+                logger.error('open_api_azure section is required')
+            return
+        
+        logger.error(f'init_llm_environment: unsupported OPENAI_API_TYPE: {self.openai_api_type}')
+
+    def create_llm(self, max_tokens : int, model_name : str) -> ChatOpenAI:
+        """Create LLM"""
+
+        if self.openai_api_type == 'openai':
+            return ChatOpenAI(
+                model_name     = model_name,
+                max_tokens     = max_tokens,
+                temperature    = 0,
+                verbose        = False,
+                model_kwargs={
+                    "frequency_penalty": 0.0,
+                    "presence_penalty" : 0.0,
+                    "top_p" : 1.0
+                }        
+            )
+        
+        if self.openai_api_type == 'azure':
+            return AzureChatOpenAI(
+                azure_deployment   = self.openai_api_deployment,
+                model_name     = model_name,
+                max_tokens     = max_tokens,
+                temperature    = 0,
+                verbose        = False,
+                model_kwargs={
+                    "frequency_penalty": 0.0,
+                    "presence_penalty" : 0.0,
+                    "top_p" : 1.0
+                }        
+            )
+        
+        logger.error(f'create_llm: unsupported OPENAI_API_TYPE: {self.openai_api_type}')
+        return None
 
 
     def generate_sql_schema(self, db_name : str, table_description : str, rules : str = None, existed_tables : list[str] = None) -> str :

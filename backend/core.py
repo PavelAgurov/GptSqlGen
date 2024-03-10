@@ -4,6 +4,7 @@
 # pylint: disable=C0301,C0103,C0303,C0411,W1203
 
 import logging
+from typing import Any
 from backend.llm_core import LLMCore 
 
 logger : logging.Logger = logging.getLogger()
@@ -15,10 +16,9 @@ class Core:
 
     llm_backend = None
 
-    def __init__(self):
+    def __init__(self, all_secrets : dict[str, Any]):
         logger.info("Core init")
-        self.llm_backend = LLMCore()
-
+        self.llm_backend = LLMCore(all_secrets)
 
     def generate_sql_schema(self, db_name : str, table_description : str, table_rules : str, existed_tables_str : str) -> str :
         """

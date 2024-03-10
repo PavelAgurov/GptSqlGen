@@ -20,7 +20,8 @@ logger : logging.Logger = logging.getLogger()
 
 # ------------------------------- Session
 if 'core' not in st.session_state:
-    st.session_state.core = Core()
+    all_secrets = {s[0]:s[1] for s in st.secrets.items()}
+    st.session_state.core = Core(all_secrets)
 if 'tokens' not in st.session_state:
     st.session_state.tokens = 0
 if 'generated_schema' not in st.session_state:
