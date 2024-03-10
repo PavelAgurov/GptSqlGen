@@ -10,7 +10,7 @@ from langchain.globals import set_llm_cache
 from langchain.cache import SQLiteCache
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain.callbacks import get_openai_callback
+from langchain_community.callbacks import get_openai_callback
 
 from backend import prompts
 from backend import xml_utils
@@ -36,16 +36,19 @@ class LLMCore:
         )
 
         # Init chains
-        generate_schema_prompt = ChatPromptTemplate.from_template(prompts.GENERATE_SCHEMA_PROMPT)
-        self.chain_generate_schema  = generate_schema_prompt | self.llm | StrOutputParser()
+        generate_sql_schema_prompt = ChatPromptTemplate.from_template(prompts.GENERATE_SQL_SCHEMA_PROMPT)
+        self.chain_generate_sql_schema  = generate_sql_schema_prompt | self.llm | StrOutputParser()
+
+        generate_prisma_schema_prompt = ChatPromptTemplate.from_template(prompts.GENERATE_PRISMA_SCHEMA_PROMPT)
+        self.chain_generate_prisma_schema  = generate_prisma_schema_prompt | self.llm | StrOutputParser()
 
         generate_sql_prompt = ChatPromptTemplate.from_template(prompts.GENERATE_SQL_PROMPT)
         self.chain_generate_sql  = generate_sql_prompt | self.llm | StrOutputParser()
 
 
-    def generate_schema(self, table_description : str, rules : str = None, existed_tables : list[str] = None) -> str :
+    def generate_sql_schema(self, db_name : str, table_description : str, rules : str = None, existed_tables : list[str] = None) -> str :
         """
-            Generate schema based on table description and list of existed tables
+            Generate SQL schema based on table description and list of existed tables
         """
         if existed_tables is None:
             existed_tables = []
@@ -55,10 +58,11 @@ class LLMCore:
             rules = prompts.GENERATE_SCHEMA_DEFAULT_RULES
 
         with get_openai_callback() as cb:
-            sql_xml = self.chain_generate_schema.invoke({
+            sql_xml = self.chain_generate_sql_schema.invoke({
+                "dbname" : db_name,
                 "rules" : rules,
                 "existed_tables": existed_tables_str, 
-                "table_fields": table_description
+                "table_description": table_description
             })
         tokens_used = cb.total_tokens
        
@@ -80,7 +84,48 @@ class LLMCore:
         table_string = xml_utils.xml_to_string(table_element)
         return table_string, table_name, tokens_used
     
-    def generate_sql(self, table_schema : str, script_definition : str = None, existed_tables : list[str] = None) -> str:
+
+    def generate_prisma_schema(self, db_name : str, table_description : str, rules : str = None, existed_tables : list[str] = None) -> str :
+        """
+            Generate Prisma schema based on table description and list of existed tables
+        """
+        if existed_tables is None:
+            existed_tables = []
+        existed_tables_str = "\n".join([f"- {t} - table for {t.replace('tb_', '')}" for t in existed_tables])
+
+        if rules is None:
+            rules = prompts.GENERATE_SCHEMA_DEFAULT_RULES
+
+        with get_openai_callback() as cb:
+            sql_xml = self.chain_generate_prisma_schema.invoke({
+                "dbname" : db_name,
+                "rules" : rules,
+                "existed_tables": existed_tables_str, 
+                "table_description": table_description
+            })
+        tokens_used = cb.total_tokens
+       
+        sql_xml = self.extract_llm_xml_string(sql_xml)
+        logger.debug(f"LLM generated schema: {sql_xml}")
+        logger.debug(f"LLM used tokens: {tokens_used}")
+        
+        x = xml_utils.get_as_xml(sql_xml)
+        table_element = x.find('.//table')
+        if table_element is None:
+            logger.error("Could not find table element in LLM generated XML")
+            return None, None, tokens_used
+    
+        table_name = table_element.attrib['name']
+        if table_name is None:
+            logger.error("Could not find table name in LLM generated XML")
+            return table_element, None, tokens_used
+    
+        prisma_element = x.find('.//prisma')
+        prisma_string = prisma_element.text.strip()
+        return prisma_string, table_name, tokens_used
+
+
+    def generate_sql(self, db_name : str, table_schema : str, script_definition : str = None, existed_tables : list[str] = None) -> str:
         """
             Generate sql for a table
         """
@@ -93,9 +138,10 @@ class LLMCore:
 
         with get_openai_callback() as cb:
             sql_xml = self.chain_generate_sql.invoke({
+                "dbname" : db_name,
                 "existed_tables": existed_tables_str, 
                 "script": script_definition, 
-                "table_fields": table_schema
+                "table_schema": table_schema
             })
         tokens_used = cb.total_tokens
        

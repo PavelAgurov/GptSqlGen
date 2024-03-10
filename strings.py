@@ -33,8 +33,8 @@ Table user with common fields.
 **Example of Table rules:**
 ```
 Field contains:
-- correct database field name based on Postgres notation
-- field type based on Postgres types
+- correct database field name based on SQL notation
+- field type based on SQL types
 - primary_key (if true, default value is false)
 - not_null (if true, default value is false)
 - unique (if true, default value is false)

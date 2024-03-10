@@ -56,6 +56,8 @@ if st.session_state.operation_errors:
     st.error(st.session_state.operation_errors)
     st.session_state.operation_errors = None
 
+db_name = st.text_input("Database Name:", value="Postgres")
+
 tab_tables, tab_procedures = st.tabs(["Generate Tables", "Generate Procedures"])
 
 with tab_tables:
@@ -65,13 +67,18 @@ with tab_tables:
     table_generate_columns = st.columns(2)
     table_description = table_generate_columns[0].text_area("Table Description:", height=200, placeholder= "See Examples above")
     table_rules = table_generate_columns[1].text_area("Table Rules for schema generation:", st.session_state.table_rules, height=200, placeholder= "See Examples above")
-    button_generate_schema = st.button("Generate schema")
+    button_generate_columns = st.columns(8)
+    button_generate_schema = button_generate_columns[0].button("Generate XML schema")
+    button_generate_prisma = button_generate_columns[1].button("Generate Prisma schema")
 
     table_sql_columns = st.columns(2)
     table_schema = table_sql_columns[0].text_area("Table Schema:", st.session_state.generated_schema, height=200, placeholder= "See Examples above")
     table_schema_script_definition = table_sql_columns[1].text_area("Script Definition for SQL generation:", st.session_state.table_script_definition, height=200, placeholder= "See Examples above")
     button_generate_sql = st.button("Generate SQL")
     table_sql = st.text_area("Sql:", st.session_state.generated_sql, height=200)
+
+with tab_procedures:
+    st.info("TBD")
 
 def update_used_tokens(currently_used = 0):
     """Update token counters"""
@@ -81,21 +88,31 @@ def update_used_tokens(currently_used = 0):
 update_used_tokens()
 
 if button_generate_schema:
-    if not table_description or not table_rules:
-        st.session_state.operation_errors = "Please enter table description and rules"
+    if not db_name or not table_description or not table_rules:
+        st.session_state.operation_errors = "Please enter database name, table description and rules"
     else:
         existed_tables_str = ""
-        st.session_state.generated_schema, tokens_used = st.session_state.core.generate_schema(table_description, table_rules, existed_tables_str)
+        st.session_state.generated_schema, tokens_used = st.session_state.core.generate_sql_schema(db_name, table_description, table_rules, existed_tables_str)
         update_used_tokens(tokens_used)
         st.session_state.operation_done = "Schema generated"
     st.rerun()
 
-if button_generate_sql:
-    if not table_schema:
-        st.session_state.operation_errors = "Please enter table schema"
+if button_generate_prisma:
+    if not db_name or not table_description or not table_rules:
+        st.session_state.operation_errors = "Please enter database name, table description and rules"
     else:
         existed_tables_str = ""
-        st.session_state.generated_sql, tokens_used = st.session_state.core.generate_sql(table_schema, st.session_state.table_script_definition, existed_tables_str)
+        st.session_state.generated_schema, tokens_used = st.session_state.core.generate_prisma_schema(db_name, table_description, table_rules, existed_tables_str)
+        update_used_tokens(tokens_used)
+        st.session_state.operation_done = "Prisma schema generated"
+    st.rerun()
+
+if button_generate_sql:
+    if not db_name or not table_schema or not st.session_state.table_script_definition:
+        st.session_state.operation_errors = "Please enter database name, table schema and script definition"
+    else:
+        existed_tables_str = ""
+        st.session_state.generated_sql, tokens_used = st.session_state.core.generate_sql(db_name, table_schema, st.session_state.table_script_definition, existed_tables_str)
         update_used_tokens(tokens_used)
         st.session_state.operation_done = "SQL generated"
     st.rerun()
