@@ -6,7 +6,7 @@
 import streamlit as st
 import logging
 
-from utils_streamlit import streamlit_hack_remove_top_space
+from utils_streamlit import streamlit_hack_remove_top_space, hide_header_footer
 from utils.app_logger import init_streamlit_logger
 
 from backend.core import Core
@@ -44,6 +44,7 @@ if 'table_script_definition' not in st.session_state or st.session_state.table_s
 # ------------------------------- UI
 st.set_page_config(page_title= "Sql Generator", layout="wide")
 streamlit_hack_remove_top_space()
+hide_header_footer()
 
 st.markdown("## Sql Generator") 
 st.info(strings.APP_INFO, icon="ℹ️")

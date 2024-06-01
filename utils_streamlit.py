@@ -53,12 +53,12 @@ def streamlit_hack_remove_top_space():
         </style>
         """, unsafe_allow_html=True)
 
-def hide_footer():
+def hide_header_footer():
     """Hide footer"""
     hide_streamlit_style = """
             <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
+            [data-testid="stToolbar"] {visibility: hidden !important;}
+            footer {visibility: hidden !important;}
             </style>
             """
-    st.markdown(hide_streamlit_style, unsafe_allow_html=True) 
+    st.markdown(hide_streamlit_style, unsafe_allow_html=True)    
