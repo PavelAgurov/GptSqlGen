@@ -1,7 +1,8 @@
-langchain
 openai
 streamlit
 tiktoken
 sentence-transformers
+langchain
 langchain_openai
 langchain_core
+langchain_community

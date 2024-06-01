@@ -9,10 +9,10 @@ from typing import Any
 
 from langchain_openai import ChatOpenAI, AzureChatOpenAI
 from langchain.globals import set_llm_cache
-from langchain.cache import SQLiteCache
+from langchain_community.cache import SQLiteCache
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_community.callbacks import get_openai_callback
+from langchain_community.callbacks.manager import get_openai_callback
 
 from backend import prompts
 from backend import xml_utils
