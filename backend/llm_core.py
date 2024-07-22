@@ -108,12 +108,7 @@ class LLMCore:
                 model_name     = model_name,
                 max_tokens     = max_tokens,
                 temperature    = 0,
-                verbose        = False,
-                model_kwargs={
-                    "frequency_penalty": 0.0,
-                    "presence_penalty" : 0.0,
-                    "top_p" : 1.0
-                }        
+                verbose        = False
             )
         
         if self.openai_api_type == 'azure':
@@ -122,12 +117,7 @@ class LLMCore:
                 model_name     = model_name,
                 max_tokens     = max_tokens,
                 temperature    = 0,
-                verbose        = False,
-                model_kwargs={
-                    "frequency_penalty": 0.0,
-                    "presence_penalty" : 0.0,
-                    "top_p" : 1.0
-                }        
+                verbose        = False
             )
         
         logger.error(f'create_llm: unsupported OPENAI_API_TYPE: {self.openai_api_type}')
